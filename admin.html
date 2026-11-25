@@ -196,7 +196,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 /* =========================================================
-   P NOTIFY সেটআপ — আপনার API KEY নিচে বসান
+   P NOTIFY — এখানে আপনার API KEY বসান
 ========================================================= */
 const P_NOTIFY_KEY = "YOUR_API_KEY_HERE"; // 👈 এখানে আপনার API Key দিন
 const P_NOTIFY_URL = "https://creator-notify.ydh.workers.dev/v1/notifications";
@@ -306,10 +306,6 @@ async function adjustBalance(userId,delta){
   if(actualDelta===0&&delta<0){toast('ব্যালেন্স ০ এর নিচে যাবে না','err');return}
   await updateDoc(doc(db,'users',userId),{balance:newBal});
   await setDoc(doc(collection(db,'transactions')),{userId,type:actualDelta>0?'add':'withdraw',amount:actualDelta,note:'এডমিন অ্যাড',trx:'ADMIN',status:'approved',time:Date.now()});
-  
-  // ইউজারকে নোটিফিকেশন
-  await sendNotification("ব্যালেন্স আপডেট! 💰", `আপনার অ্যাকাউন্টে ${actualDelta>0?'+':''}${actualDelta}৳ করা হয়েছে। বর্তমান ব্যালেন্স: ${newBal}৳`);
-  
   toast(`${actualDelta>0?'+':''}${actualDelta}৳ ${u.name}-এ হয়েছে`,'ok');
 }
 
@@ -336,7 +332,6 @@ async function approveTx(id){
     const u=usersCache.find(x=>x.id===t.userId);
     if(u){
       await updateDoc(doc(db,'users',u.id),{balance:(u.balance||0)+t.amount});
-      // ইউজারকে নোটিফিকেশন
       await sendNotification("ব্যালেন্স যোগ হয়েছে! 💰", `আপনার অ্যাকাউন্টে ${fmt(t.amount)}৳ যোগ করা হয়েছে। বর্তমান ব্যালেন্স: ${fmt((u.balance||0)+t.amount)}৳`);
     }
   }
@@ -364,7 +359,6 @@ async function addTournament(){
     roomId:'',roomPass:'',showRoom:false,winners:[],createdAt:Date.now()
   });
   
-  // সব ইউজারের কাছে নোটিফিকেশন
   await sendNotification("নতুন টুর্নামেন্ট এসেছে! 🎮", `${name} | এন্ট্রি ফি: ${fee}৳ | প্রাইজ: ${$('tPrize').value}৳ | এখনই জয়েন করুন!`);
   
   ['tName','tMap','tMapImage','tTime','tFee','tPrize','tSlots','tFFLevel','tIcon'].forEach(id=>$(id).value='');
@@ -403,7 +397,6 @@ async function saveTourEdit(id){
 }
 async function deleteTour(id){ if(!confirm('টুর্নামেন্ট ডিলিট?'))return; await deleteDoc(doc(db,'tournaments',id)); toast('ডিলিট হয়েছে','ok'); }
 
-/* BANNERS */
 async function addBanner(){
   const url=$('bannerImgUrl').value.trim();
   if(!url){toast('ছবির URL দিন','err');return}
@@ -419,7 +412,6 @@ function renderBanners(){
 }
 async function deleteBanner(id){ if(!confirm('ব্যানার ডিলিট?'))return; await deleteDoc(doc(db,'banners',id)); toast('ডিলিট হয়েছে','ok'); }
 
-/* SETTINGS */
 function loadSettingsInputs(){
   if(!$('setBkash'))return;
   $('setBkash').value=settingsCache.bkashNumber||'';
@@ -433,7 +425,6 @@ async function saveSettings(){
   toast('✓ সেভ হয়েছে','ok');
 }
 
-/* INIT */
 window.addEventListener('load',()=>{
   setTimeout(()=>{
     if(sessionStorage.getItem('fftm_admin')==='1'){
@@ -442,7 +433,6 @@ window.addEventListener('load',()=>{
   },800);
 });
 
-// Expose
 window.adminLogin=adminLogin; window.adminLogout=adminLogout; window.showTab=showTab;
 window.setTxFilter=setTxFilter; window.approveTx=approveTx; window.rejectTx=rejectTx;
 window.deleteUser=deleteUser; window.adjustBalance=adjustBalance;
