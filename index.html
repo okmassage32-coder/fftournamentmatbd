@@ -181,6 +181,10 @@ body::before{content:'';position:fixed;inset:0;z-index:-2;background:radial-grad
       <p id="profPhone">01XXXXXXXXX</p>
     </div>
     <div class="profile-form">
+      <div class="section-title" style="font-size:.95rem;margin-top:0">🔔 নোটিফিকেশন</div>
+      <p style="font-size:0.8rem; color:var(--muted); margin-bottom:10px;">টুর্নামেন্ট এবং ক্যাশ আপডেটের নোটিফিকেশন পেতে নিচের বাটনে ক্লিক করুন।</p>
+      <button class="btn btn-outline" style="margin-top:0; margin-bottom:16px;" onclick="enablePushNotifications()">🔔 নোটিফিকেশন চালু করুন</button>
+
       <div class="section-title" style="font-size:.95rem;margin-top:0">✏️ প্রোফাইল এডিট</div>
       <div class="field"><label>ইউজারের নাম</label><span class="icon">👤</span><input id="profEditName"></div>
       <div class="field"><label>মোবাইল নাম্বার</label><span class="icon">📱</span><input id="profEditPhone"></div>
@@ -221,7 +225,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 /* =========================================================
-   P NOTIFY — আপনার API KEY বসানো হয়েছে
+   P NOTIFY — এখানে আপনার API KEY বসানো হয়েছে
 ========================================================= */
 const P_NOTIFY_KEY = "cn_live_kvCbrsynYSSygxLK8VghyhjecwTW2PRUjpHhoTWj";
 const P_NOTIFY_URL = "https://creator-notify.ydh.workers.dev/v1/notifications";
@@ -235,6 +239,29 @@ async function sendNotification(title, body) {
     });
   } catch (e) { console.log("Notify error:", e); }
 }
+
+// ওয়েবসাইটে ঢুকলেই যেন পপ-আপ না আসে, সেজন্য অটো পারমিশন বন্ধ করা হলো
+window.enablePushNotifications = async function() {
+  if (!("Notification" in window)) {
+    toast("আপনার ব্রাউজার নোটিফিকেশন সাপোর্ট করে না।", "err");
+    return;
+  }
+  if (Notification.permission === 'granted') {
+    toast("নোটিফিকেশন ইতিমধ্যে চালু আছে!", "ok");
+    return;
+  }
+  if (Notification.permission !== 'denied') {
+    const perm = await Notification.requestPermission();
+    if (perm === 'granted') {
+      toast("নোটিফিকেশন সফলভাবে চালু হয়েছে!", "ok");
+      new Notification("FF TOURNAMENT MAT", { body: "ধন্যবাদ! এখন থেকে আপনি নোটিফিকেশন পাবেন।", icon: "./app_icon.png" });
+    } else {
+      toast("আপনি নোটিফিকেশন বন্ধ রেখেছেন।", "err");
+    }
+  } else {
+    toast("ব্রাউজার সেটিংস থেকে নোটিফিকেশন Allow করুন।", "err");
+  }
+};
 /* ========================================================= */
 
 let currentUser=null;
