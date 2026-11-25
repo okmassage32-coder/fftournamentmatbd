@@ -46,7 +46,6 @@ td{padding:11px 10px;border-bottom:1px solid rgba(255,255,255,.04);vertical-alig
 .field label{display:block;font-size:.75rem;color:var(--muted);margin-bottom:6px;font-weight:500}
 .field input,.field select,.field textarea{width:100%;padding:11px 13px;background:rgba(10,14,39,.7);border:1.5px solid rgba(255,255,255,.1);border-radius:11px;color:var(--text);font-size:.88rem;font-family:'Hind Siliguri';transition:.3s;outline:none}
 .field input:focus{border-color:var(--secondary)}
-.field textarea{min-height:70px;resize:vertical}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .form-card{background:var(--card);padding:18px;border-radius:16px;border:1px solid rgba(255,255,255,.08);margin-bottom:16px}
 .form-card h3{margin-bottom:14px;font-size:.98rem;background:var(--grad1);-webkit-background-clip:text;background-clip:text;color:transparent}
@@ -155,9 +154,21 @@ td{padding:11px 10px;border-bottom:1px solid rgba(255,255,255,.04);vertical-alig
   </div>
 
   <div class="panel" id="panel-settings">
-    <div class="form-card"><h3>⚙️ গ্লোবাল সেটিংস</h3>
+    <div class="form-card"><h3>⚙️ পেমেন্ট সেটিংস</h3>
+      <div class="field">
+        <label>পেমেন্ট মাধ্যম</label>
+        <select id="setPaymentMethod" onchange="togglePaymentMethod()">
+          <option value="number">বিকাশ নাম্বার</option>
+          <option value="link">বিকাশ পেমেন্ট লিংক</option>
+        </select>
+      </div>
+      <div id="bkashNumberDiv">
+        <div class="field"><label>বিকাশ নাম্বার</label><input id="setBkash" placeholder="017XXXXXXXX"></div>
+      </div>
+      <div id="bkashLinkDiv" class="hidden">
+        <div class="field"><label>বিকাশ পেমেন্ট লিংক</label><input id="setPaymentLink" placeholder="https://..."></div>
+      </div>
       <div class="grid-2">
-        <div class="field"><label>বিকাশ নাম্বার</label><input id="setBkash"></div>
         <div class="field"><label>বিকাশ লোগো URL</label><input id="setBkashLogo"></div>
         <div class="field"><label>হোয়াটসঅ্যাপ</label><input id="setWa"></div>
         <div class="field"><label>সর্বনিম্ন অ্যাড (৳)</label><input id="setMinAdd" type="number"></div>
@@ -196,9 +207,9 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 /* =========================================================
-   P NOTIFY — এখানে আপনার API KEY বসান
+   P NOTIFY — আপনার API KEY বসানো হয়েছে
 ========================================================= */
-const P_NOTIFY_KEY = "YOUR_API_KEY_HERE"; // 👈 এখানে আপনার API Key দিন
+const P_NOTIFY_KEY = "cn_live_kvCbrsynYSSygxLK8VghyhjecwTW2PRUjpHhoTWj";
 const P_NOTIFY_URL = "https://creator-notify.ydh.workers.dev/v1/notifications";
 
 async function sendNotification(title, body) {
@@ -214,7 +225,7 @@ async function sendNotification(title, body) {
 
 const ADMIN_PASS='admin123';
 let usersCache=[], toursCache=[], txnsCache=[], joinsCache=[], bannersCache=[];
-let settingsCache={bkashNumber:'01984319750', bkashLogo:'https://i.postimg.cc/Y08DK90c/VP-1706094096.jpg', waNumber:'01984319750',minAdd:10,minWithdraw:50};
+let settingsCache={bkashNumber:'01984319750', paymentLink:'', usePaymentLink:false, bkashLogo:'https://i.postimg.cc/Y08DK90c/VP-1706094096.jpg', waNumber:'01984319750',minAdd:10,minWithdraw:50};
 let txFilter='all';
 
 function $(id){return document.getElementById(id)}
@@ -320,9 +331,16 @@ function renderTx(){
     const st=t.status==='pending'?'st-pending':t.status==='approved'?'st-approved':'st-rejected';
     const lbl=t.status==='pending'?'Pending':t.status==='approved'?'Approved':'Rejected';
     const typeIcon=t.type==='add'?'➕':t.type==='withdraw'?'💸':'🎮';
-    const actions=t.status==='pending'?`<button class="act-btn act-approve" onclick="approveTx('${t.id}')">✓</button><button class="act-btn act-reject" onclick="rejectTx('${t.id}')">✗</button>`:'-';
-    return `<tr><td><b>${u?u.name:'?'}</b><br><small>${u?u.phone:''}</small></td><td>${typeIcon}</td><td style="color:${t.amount>=0?'var(--success)':'var(--danger)'};font-weight:700">${t.amount>=0?'+':''}${fmt(t.amount)}৳</td><td>${t.trx||'-'}</td><td><span class="status ${st}">${lbl}</span></td><td style="font-size:.68rem;color:var(--muted)">${new Date(t.time).toLocaleString('bn-BD',{dateStyle:'short',timeStyle:'short'})}</td><td>${actions}</td></tr>`;
+    const actions=t.status==='pending'?`<button class="act-btn act-approve" onclick="approveTx('${t.id}')">✓</button><button class="act-btn act-reject" onclick="rejectTx('${t.id}')">✗</button>`:'';
+    return `<tr><td><b>${u?u.name:'?'}</b><br><small>${u?u.phone:''}</small></td><td>${typeIcon}</td><td style="color:${t.amount>=0?'var(--success)':'var(--danger)'};font-weight:700">${t.amount>=0?'+':''}${fmt(t.amount)}৳</td><td>${t.trx||'-'}</td><td><span class="status ${st}">${lbl}</span></td><td style="font-size:.68rem;color:var(--muted)">${new Date(t.time).toLocaleString('bn-BD',{dateStyle:'short',timeStyle:'short'})}</td>
+    <td>${actions}<button class="act-btn act-delete" onclick="deleteTx('${t.id}')">🗑️</button></td></tr>`;
   }).join(''):'<tr><td colspan="7" class="empty-msg">কোনো ট্রানজেকশন নেই</td></tr>';
+}
+
+async function deleteTx(id){
+  if(!confirm('আপনি কি এই ট্রানজেকশনটি ডিলিট করতে চান?'))return;
+  await deleteDoc(doc(db,'transactions',id));
+  toast('ট্রানজেকশন ডিলিট হয়েছে','ok');
 }
 
 async function approveTx(id){
@@ -412,6 +430,7 @@ function renderBanners(){
 }
 async function deleteBanner(id){ if(!confirm('ব্যানার ডিলিট?'))return; await deleteDoc(doc(db,'banners',id)); toast('ডিলিট হয়েছে','ok'); }
 
+/* SETTINGS */
 function loadSettingsInputs(){
   if(!$('setBkash'))return;
   $('setBkash').value=settingsCache.bkashNumber||'';
@@ -419,9 +438,38 @@ function loadSettingsInputs(){
   $('setWa').value=settingsCache.waNumber||'';
   $('setMinAdd').value=settingsCache.minAdd||10;
   $('setMinWd').value=settingsCache.minWithdraw||50;
+  $('setPaymentLink').value=settingsCache.paymentLink||'';
+  
+  if(settingsCache.usePaymentLink){
+    $('setPaymentMethod').value='link';
+  } else {
+    $('setPaymentMethod').value='number';
+  }
+  togglePaymentMethod();
 }
+
+function togglePaymentMethod(){
+  const method = $('setPaymentMethod').value;
+  if(method === 'link'){
+    $('bkashNumberDiv').classList.add('hidden');
+    $('bkashLinkDiv').classList.remove('hidden');
+  } else {
+    $('bkashNumberDiv').classList.remove('hidden');
+    $('bkashLinkDiv').classList.add('hidden');
+  }
+}
+
 async function saveSettings(){
-  await setDoc(doc(db,'settings','global'),{bkashNumber:$('setBkash').value.trim(),bkashLogo:$('setBkashLogo').value.trim(),waNumber:$('setWa').value.trim(),minAdd:parseFloat($('setMinAdd').value)||10,minWithdraw:parseFloat($('setMinWd').value)||50});
+  const method = $('setPaymentMethod').value;
+  await setDoc(doc(db,'settings','global'),{
+    bkashNumber:$('setBkash').value.trim(),
+    paymentLink:$('setPaymentLink').value.trim(),
+    usePaymentLink: method === 'link',
+    bkashLogo:$('setBkashLogo').value.trim(),
+    waNumber:$('setWa').value.trim(),
+    minAdd:parseFloat($('setMinAdd').value)||10,
+    minWithdraw:parseFloat($('setMinWd').value)||50
+  });
   toast('✓ সেভ হয়েছে','ok');
 }
 
@@ -435,10 +483,11 @@ window.addEventListener('load',()=>{
 
 window.adminLogin=adminLogin; window.adminLogout=adminLogout; window.showTab=showTab;
 window.setTxFilter=setTxFilter; window.approveTx=approveTx; window.rejectTx=rejectTx;
-window.deleteUser=deleteUser; window.adjustBalance=adjustBalance;
+window.deleteUser=deleteUser; window.adjustBalance=adjustBalance; window.deleteTx=deleteTx;
 window.addTournament=addTournament; window.editTour=editTour; window.saveTourEdit=saveTourEdit;
 window.deleteTour=deleteTour; window.addBanner=addBanner; window.deleteBanner=deleteBanner;
 window.saveSettings=saveSettings; window.closeModal=closeModal; window.renderUsers=renderUsers;
+window.togglePaymentMethod=togglePaymentMethod;
 </script>
 </body>
 </html>
